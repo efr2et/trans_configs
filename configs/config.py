@@ -1,10 +1,10 @@
 import yaml
+from copy import deepcopy
 
 try:
     from yaml import CLoader as YamlLoader, CDumper as YamlDumper
 except ImportError:
     from yaml import Loader as YamlLoader, Dumper as YamlDumper
-
 
 class Config:
 
@@ -22,8 +22,21 @@ class Config:
     def export(self):
         return yaml.dump(self.data, default_flow_style=False)
 
-    def get_secrets(self):
-        return self.data['secrets_encrypted']
+    def get_secrets(self, decrypt=None):
+        secrets = self.data['secrets_encrypted']
+        if decrypt is not None:
+            secrets = deepcopy(secrets)
+            self._decrypt(secrets, decrypt)
+        return secrets
+
+    def _decrypt(self, obj, vault, path=[]):
+        for k in obj.keys():
+            path.append(k)
+            if type(obj[k]) is dict:
+                self._decrypt(obj[k], vault, path)
+            else:
+                obj[k] = vault.resolve(self, ".".join(path))
+            path.pop()
 
     def get_meta(self):
         return self.data['meta']
@@ -40,8 +53,8 @@ class Config:
 
         return self.data['vault'][vault]
 
-    def get_merged(self):
-        return Config._merge_dicts(self.data['config'], self.data['secrets_encrypted'])
+    def get_merged(self, decrypt=None):
+        return Config._merge_dicts(self.data['config'], self.get_secrets(decrypt))
 
     def _merge_dicts(a, b, path=None):
         # https://stackoverflow.com/questions/7204805/dictionaries-of-dictionaries-merge

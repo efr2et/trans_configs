@@ -3,14 +3,13 @@ import os
 
 class Env:
 
-    def __init__(self, transform_config, vault):
+    def __init__(self, transform_config):
         self.config = transform_config
-        self.vault = vault
 
-    def transform(self, config):
+    def transform(self, config, vault):
         out = []
         for k in self.config["fields"].keys():
-            value = self.vault.resolve(config, self.config["fields"][k])
+            value = vault.resolve(config, self.config["fields"][k])
             if value is None:
                 out.append('# ' + k + '=null')
             else:

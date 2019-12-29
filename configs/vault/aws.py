@@ -15,9 +15,41 @@ class Aws:
         )
         self.secretsmanager = client
 
-    def provision(self, config):
-        secrets = Aws._build_secrets(config.get_secrets())
-        pprint(secrets)
+    def provision(self, secrets):
+        secrets = Aws._build_secrets(secrets)
+
+        for k in secrets.keys():
+            secret_path = k
+            if 'base_path' in self.config:
+                secret_path = self.config['base_path'] + k
+
+            secret_arn = None
+
+            try:
+                get_secret_value_response = self.secretsmanager.get_secret_value(
+                        SecretId=secret_path
+                    )
+                secret_arn = get_secret_value_response['ARN']
+            except ClientError as e:
+                if e.response['Error']['Code'] == 'ResourceNotFoundException':
+                    secret_arn = None
+                else:
+                    raise e
+
+            if secret_arn is None:
+                self.logger.debug('Creating ' + secret_path)
+                self.secretsmanager.create_secret(
+                    Name=secret_path,
+                    # KmsKeyId
+                    SecretString = json.dumps(secrets[k])
+                )
+            else:
+                self.logger.debug('Updating ' + secret_path)
+                self.secretsmanager.put_secret_value(
+                    SecretId=secret_arn,
+                    SecretString=json.dumps(secrets[k])
+                )
+
 
     def _build_secrets(data, path=[]):
         secrets = {}

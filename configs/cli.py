@@ -18,7 +18,7 @@ def cli():
 @click.argument('input', type=click.File('rb'))
 @click.argument('format')
 @click.argument('output', type=click.File('wb'))
-@click.option('-v', '--vault', 'vault', default='sops', required=False, multiple=True)
+@click.option('-v', '--vault', 'vault', default=['sops'], required=False, multiple=True)
 def transform(input, format, output, vault):
     """Transform INPUT into FORMAT format and output to OUTPUT
     """
@@ -40,15 +40,17 @@ def transform(input, format, output, vault):
 
     logger.info('Initializing transform')
     transform_config = cfg.get_transform_config(format)
-    transform = Transforms[format](transform_config, vault_stack)
+    transform = Transforms[format](transform_config)
 
     logger.info('Transforming')
-    result = transform.transform(cfg)
+    result = transform.transform(cfg, vault_stack)
     print(result)
 
 @cli.command()
 @click.argument('input', type=click.File('rb'))
-def provision(input):
+@click.argument('source_vault')
+@click.argument('target_vault')
+def provision(input, source_vault, target_vault):
     """Read INPUT and store in the vault service
     """
     logger = logging.getLogger("configs")
@@ -57,10 +59,18 @@ def provision(input):
     cfg = Config()
     cfg.read(input)
 
-    logger.info('Fetching vault config')
-    vault_config = cfg.get_vault_config("aws")
+    logger.info('Initializing source vault')
+    source_vault_config = cfg.get_vault_config(source_vault)
+    source_vault = Vaults[source_vault](source_vault_config)
 
-    vault = VaultAws(vault_config)
+    logger.info('Initializing target valut')
+    target_vault_config = cfg.get_vault_config(target_vault)
+    target_vault = Vaults[target_vault](target_vault_config)
 
-    logger.info('Storing')
-    vault.provision(cfg.get_merged())
+    logger.info('Fetching config data')
+    secrets = cfg.get_merged(source_vault)
+
+    logger.info('Provisioning in target vault')
+    target_vault.provision(secrets)
+
+
