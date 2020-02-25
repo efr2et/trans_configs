@@ -59,6 +59,10 @@ Encrypting a new file with a local pgp key:
 
     sops --encrypted-suffix _encrypted -i --pgp ABCD1234ABCD1234ABCD1234 --encrypt myfile.yaml
 
+Encrypting a new file with AWS:
+
+	sops --encrypted-suffix _encrypted -i --kms arn:aws:kms:us-west-2:123412341234:key/11111111-2222-3333-4444-555555555555 --encrypt myfile.yaml
+
 ### aws
 
     aws:
