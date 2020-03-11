@@ -2,6 +2,8 @@ import click
 import logging
 from pprint import pprint
 
+from . import __version__
+
 from .config import Config
 from .transform import Transforms
 from .vault import Vaults
@@ -73,4 +75,9 @@ def provision(input, source_vault, target_vault):
     logger.info('Provisioning in target vault')
     target_vault.provision(secrets)
 
+@cli.command()
+def version():
+    """Display the program version
+    """
+    print(__version__)
 
