@@ -16,7 +16,7 @@ class Env:
             if value is None:
                 out.append('# ' + k + '=null')
             else:
-                out.append(k + '="' + value + '"')
+                out.append(k + '="' + str(value) + '"')
         return os.linesep.join(out)
 
     def _decode(self, value, config, vault):
@@ -30,8 +30,19 @@ class Env:
                 return vault.resolve(config, self._decode(value['vault'], config, vault))
             elif 'file' in value:
                 temp = tempfile.NamedTemporaryFile(delete=False, prefix='configs')
-                temp.write(self._decode(value['file'], config, vault).encode('utf-8'))
+                if type(value['file']) is list:
+                    if len(value['file']) >= 1:
+                        file_contents = self._decode(value['file'][0], config, vault).encode('utf-8')
+                    if len(value['file']) >= 2:
+                        file_permissions = self._decode(value['file'][1], config, vault)
+                    else:
+                        file_permissions = 0o666
+                else:
+                    file_contents = self._decode(value['file'], config, vault).encode('utf-8')
+                    file_permissions = 0o666
+                temp.write(file_contents)
                 temp.close()
+                os.chmod(temp.name, file_permissions)
                 return temp.name
             elif 'base64' in value:
                 return base64.b64decode(self._decode(value['base64'], config, vault)).decode('utf-8')
